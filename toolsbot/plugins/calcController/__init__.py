@@ -21,15 +21,27 @@ async def _(event: Message = CommandArg()):
             expression = event.extract_plain_text()
             msg += "结果：\n"
             if "+" in expression:
-                msg += str(eval(expression))
+                params = expression.split("+")
+                params [0] = int(params [0].replace(" "))
+                params [1] = int(params [1].replace(" "))
+                msg += str(params[0] + params[1])
             elif "-" in expression:
-                msg += str(eval(expression))
+                params = expression.split("-")
+                params [0] = int(params [0].replace(" "))
+                params [1] = int(params [1].replace(" "))
+                msg += str(params[0] + params[1])
             elif "*" in expression:
-                msg += str(eval(expression))
+                params = expression.split("*")
+                params [0] = int(params [0].replace(" "))
+                params [1] = int(params [1].replace(" "))
+                msg += str(params[0] + params[1])
             elif "/" in expression:
-                msg += str(eval(expression))
+                params = expression.split("/")
+                params [0] = int(params [0].replace(" "))
+                params [1] = int(params [1].replace(" "))
+                msg += str(params[0] + params[1])
             else:
-                msg += "\n请输入正确的算式 PS: 本计算器为简易计算器，不支持高级运算。"
+                msg += "\n请输入正确的算式 PS: 本计算器为简易计算器，不支持高级运算。运算符号为 + - * /"
         except BaseException:
-            msg += "\n请输入正确的算式 PS: 本计算器为简易计算器，不支持高级运算。"
+            msg += "\n请输入正确的算式 PS: 本计算器为简易计算器，不支持高级运算。运算符号为 + - * /"
         await calc_eventer.send(msg)
