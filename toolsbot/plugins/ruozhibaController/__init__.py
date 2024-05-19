@@ -14,6 +14,7 @@ question = on_command("question", priority=5, block=True)
 async def _(args: Message = CommandArg()):
     msg = ""
     msg += "弱智吧问题精选"
-    questions:dict = eval(open("./ruozhiba_question.json", "r", encoding="utf-8").read())
-    msg += f"您抽到的问题为：{questions.keys()[randint(0,90)]}"
+    questions_dict:dict = eval(open("./ruozhiba_question.json", "r", encoding="utf-8").read())
+    question = list(questions_dict.keys())[randint(0,90)]
+    msg += f"您抽到的问题为：{question}"
     await question.finish(msg)
