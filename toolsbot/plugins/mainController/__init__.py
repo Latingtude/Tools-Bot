@@ -27,6 +27,7 @@ async def _(event: Message = CommandArg()):
     msg += "\n*info 查看用户面板\n"
     msg += "\n*setinfo 设置用户 [注意：此功能仅 SUPERUSER 用户组可用]\n"
     msg += "\n*buy 买东西"
+    msg += "\n*calc 计算器"
     wait(wrd(0.5,0.9))
     await help_eventer.send(msg)
 
@@ -55,8 +56,8 @@ async def _(event: Message = CommandArg()):
     NoneBot版本:1.9.1
     """
     msg = "关于 Bot"
-    msg += "\n版本: 1.0.3-release (Skills 8)"
-    msg += "\n最后一次更新时间：2024/5/18 14:30"
+    msg += "\n版本: 1.0.4-release (Skills 10)"
+    msg += "\n最后一次更新时间：2024/5/19 13:12"
     msg += "\n[作者网站]"
     msg += "\nhttps://moesoft.xyz"
     msg += "\nhttps://virtual.icp.moesoft.xyz (虚拟ICP备案，玩的)"
