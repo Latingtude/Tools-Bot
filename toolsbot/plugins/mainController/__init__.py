@@ -46,7 +46,7 @@ about_eventer = on_command("about", aliases={"关于"}, priority=5)
 async def _(event: Message = CommandArg()):
     """
     关于 Bot
-    版本: 1.0.3-release (Skills 8)
+    版本: 1.0.3-release (Skills 10)
     最后一次更新时间：2024/5/19 11:12
     [作者网站]
     https://moesoft.xyz
@@ -57,8 +57,8 @@ async def _(event: Message = CommandArg()):
     NoneBot版本:1.9.1
     """
     msg = "关于 Bot"
-    msg += "\n版本: 1.0.4-release (Skills 10)"
-    msg += "\n最后一次更新时间：2024/5/19 13:12"
+    msg += "\n版本: 1.0.4-release (Skills 11)"
+    msg += "\n最后一次更新时间：2024/5/19 14：01"
     msg += "\n[作者网站]"
     msg += "\nhttps://moesoft.xyz"
     msg += "\nhttps://virtual.icp.moesoft.xyz (虚拟ICP备案，玩的)"
