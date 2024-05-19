@@ -37,7 +37,7 @@ async def handle_function(args: Message = CommandArg()):
         msg += "\n使用方法："
         wait(wrd(0.5,0.9))
         msg += "\n@[bot] *base64 encode*decode [内容]"
-    base64_eventer.finish(msg)
+    await base64_eventer.finish(msg)
 
 base32_eventer = on_command("base32", aliases={"b32"}, priority=5)
 
@@ -63,7 +63,7 @@ async def handle_function(args: Message = CommandArg()):
         msg += "\n使用方法："
         wait(wrd(0.5,0.9))
         msg += "\n@[bot] *base32 encode*decode [内容]"
-    base32_eventer.finish(msg)
+    await base32_eventer.finish(msg)
 
 base16_eventer = on_command("base16", aliases={"b16"}, priority=5)
 
@@ -90,7 +90,7 @@ async def handle_function(args: Message = CommandArg()):
         msg += "\n使用方法："
         wait(wrd(0.5,0.9))
         msg += "\n@[bot] *base16 encode*decode [内容]"
-    base16_eventer.finish(msg)
+    await base16_eventer.finish(msg)
 
 base85_eventer = on_command("base85", aliases={"b85"}, priority=5)
 
@@ -116,7 +116,7 @@ async def handle_function(args: Message = CommandArg()):
         msg += "\n使用方法："
         wait(wrd(0.5,0.9))
         msg += "\n@[bot] *base85 encode*decode [内容]"
-    base85_eventer.finish(msg)
+    await base85_eventer.finish(msg)
 
 base58_eventer = on_command("base58", aliases={"b58"}, priority=5)
 
@@ -143,4 +143,4 @@ async def handle_function(args: Message = CommandArg()):
         msg += "\n使用方法："
         wait(wrd(0.5,0.9))
         msg += "\n@[bot] *base58 encode*decode [内容]"
-    base58_eventer.finish(msg)
+    await base58_eventer.finish(msg)
