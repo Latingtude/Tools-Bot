@@ -28,6 +28,7 @@ async def _(event: Message = CommandArg()):
     msg += "\n*setinfo 设置用户 [注意：此功能仅 SUPERUSER 用户组可用]"
     msg += "\n*buy 买东西"
     msg += "\n*calc 计算器"
+    msg += "\n*question 随机挑选弱智吧问题"
     wait(wrd(0.5,0.9))
     await help_eventer.send(msg)
 
