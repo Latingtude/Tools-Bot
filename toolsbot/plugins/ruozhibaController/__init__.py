@@ -13,8 +13,8 @@ question_eventer = on_command("question", priority=5, block=True)
 @question_eventer.handle()
 async def _(args: Message = CommandArg()):
     msg = ""
-    msg += "弱智吧问题精选"
+    msg += "弱智吧问题精选\n"
     questions_dict:dict = eval(open("./ruozhiba_question.json", "r", encoding="utf-8").read())
-    question = list(questions_dict.keys())[randint(0,90)]
+    question = list(questions_dict.values())[randint(0,90)]
     msg += f"您抽到的问题为：{question}"
     await question_eventer.finish(msg)
