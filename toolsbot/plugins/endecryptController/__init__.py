@@ -12,24 +12,60 @@ nonebot.init()
 driver = nonebot.get_driver()
 driver.register_adapter(Adapter)
 
+#---------------------------------------------------------
+'''
+采用AES对称加密算法
+'''
+# str不是16的倍数那就补足为16的倍数
+def add_to_16(message):
+    while len(message) % 16 != 0:
+        message = str(message)
+        message += '\0'
+        # message = str(message)
+    return message.encode('utf-8')  # 返回bytes
+
+
 # 加密方法
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-from Crypto.Random import get_random_bytes
-import base64
+def encoaes(message,key_pri):
+    '''
+    加密函数，传入明文 & 秘钥，返回密文；
+    :param message: 明文
+    :param key_pri: 秘钥
+    :return:encrypted  密文
+    '''
+    # 初始化加密器
+    aes = AES.new(add_to_16(key_pri), AES.MODE_ECB)
+    # 将明文转为 bytes
+    message_bytes = message.encode('utf-8')
+    # 长度调整
+    message_16 = add_to_16(message_bytes)
+    #先进行aes加密
+    encrypt_aes = aes.encrypt(message_16)
+    #用base64转成字符串形式
+    encrypt_aes_64 = base64.b64encode(encrypt_aes)
+    return encrypt_aes_64.decode('utf-8')
 
-def encrypt_aes_pycryptodome(message, key):
-    iv = get_random_bytes(16)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    ciphertext = cipher.encrypt(pad(message.encode('utf-8'), AES.block_size))
-    return base64.b64encode(iv + ciphertext).decode('utf-8')
 
-def decrypt_aes_pycryptodome(encrypted_message, key):
-    encrypted_message = base64.b64decode(encrypted_message)
-    iv = encrypted_message[:16]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    plaintext = unpad(cipher.decrypt(encrypted_message[16:]), AES.block_size)
-    return plaintext.decode('utf-8')
+# 解密方法
+def decoaes(message,key_pri):
+    '''
+    解密函数，传入密文 & 秘钥，返回明文；
+    :param message: 密文
+    :param key_pri: 秘钥
+    :return: encrypted 明文
+    '''
+    # 初始化加密器
+    aes = AES.new(add_to_16(key_pri), AES.MODE_ECB)
+    #优先逆向解密base64成bytes
+    message_de64 = base64.b64decode(message)
+    # 解密 aes
+    message_de64_deaes = aes.decrypt(message_de64)
+    try:
+        message_de64_deaes_de = message_de64_deaes.decode('utf-8')
+    except UnicodeDecodeError as e:
+        print(f'UnicodeDecodeError:{e}\n疑似密码错误')
+    else:
+        return eval(message_de64_deaes_de.replace('\x00','')).decode()
 
 aes_eventer = on_command("aes", priority=5, block=True)
 
@@ -41,10 +77,10 @@ async def handle_function(args: Message = CommandArg()):
         params_l = params.split(" ")
         if params_l[0] == "encrypt":
             wait(wrd(0.5,0.9))
-            msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n加密为：\n{encrypt_aes_pycryptodome(params_l[1],params_l[2])}"
+            msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n加密为：\n{encoaes(params_l[1],params_l[2])}"
         elif params_l[0] == "decrypt":
             wait(wrd(0.5,0.9))
-            msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n解密为：\n{decrypt_aes_pycryptodome(params_l[1],params_l[2])}"
+            msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n解密为：\n{decoaes(params_l[1],params_l[2])}"
         else:
             wait(wrd(0.5,0.9))
             msg += "\n使用方法："
