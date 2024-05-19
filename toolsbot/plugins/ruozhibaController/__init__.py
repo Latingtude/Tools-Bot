@@ -8,7 +8,7 @@ import nonebot
 from time import sleep as wait
 from random import uniform,randint
 
-question = on_command("/question", priority=5, block=True)
+question = on_command("question", priority=5, block=True)
 
 @question.handle()
 async def _(args: Message = CommandArg()):
