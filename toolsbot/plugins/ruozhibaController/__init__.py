@@ -8,13 +8,13 @@ import nonebot
 from time import sleep as wait
 from random import uniform,randint
 
-question = on_command("question", priority=5, block=True)
+question_eventer = on_command("question", priority=5, block=True)
 
-@question.handle()
+@question_eventer.handle()
 async def _(args: Message = CommandArg()):
     msg = ""
     msg += "弱智吧问题精选"
     questions_dict:dict = eval(open("./ruozhiba_question.json", "r", encoding="utf-8").read())
     question = list(questions_dict.keys())[randint(0,90)]
     msg += f"您抽到的问题为：{question}"
-    await question.finish(msg)
+    await question_eventer.finish(msg)
