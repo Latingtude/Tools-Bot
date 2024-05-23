@@ -3,14 +3,12 @@ from nonebot.adapters import Message
 from nonebot.params import CommandArg
 import Crypto.Cipher.AES as AES
 import base64
-from nonebot.adapters.cqhttp import Adapter
+from nonebot.adapters.onebot.v11 import MessageEvent
 import nonebot
 from time import sleep as wait
 from random import uniform as wrd
+import dauCtl as dc
 
-nonebot.init()
-driver = nonebot.get_driver()
-driver.register_adapter(Adapter)
 
 #---------------------------------------------------------
 '''
@@ -64,32 +62,37 @@ def decoaes(message,key_pri):
         message_de64_deaes_de = message_de64_deaes.decode('utf-8')
     except UnicodeDecodeError as e:
         print(f'UnicodeDecodeError:{e}\n疑似密码错误')
+        return "无法解密：疑似密码错误"
     else:
         return eval(message_de64_deaes_de.replace('\x00','')).decode()
 
 aes_eventer = on_command("aes", priority=5, block=True)
 
 @aes_eventer.handle()
-async def handle_function(args: Message = CommandArg()):
+async def handle_function(event: MessageEvent,args: Message = CommandArg()):
     msg = ""
-    if params := args.extract_plain_text():
-        msg += "\nAES 加密解密"
-        params_l = params.split(" ")
-        if params_l[0] == "encrypt":
-            wait(wrd(0.5,0.9))
-            msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n加密为：\n{encoaes(params_l[1],params_l[2])}"
-        elif params_l[0] == "decrypt":
-            wait(wrd(0.5,0.9))
-            msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n解密为：\n{decoaes(params_l[1],params_l[2])}"
+    user = dc.User(event.get_user_id())
+    if not user.isbanned():
+        if params := args.extract_plain_text():
+            msg += "\nAES 加密解密"
+            params_l = params.split(" ")
+            if params_l[0] == "encrypt":
+                wait(wrd(0.5,0.9))
+                msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n加密为：\n{encoaes(params_l[1],params_l[2])}"
+            elif params_l[0] == "decrypt":
+                wait(wrd(0.5,0.9))
+                msg += f"\n内容 {params_l[1]} \n密钥 {params_l[2]}\n解密为：\n{decoaes(params_l[1],params_l[2])}"
+            else:
+                wait(wrd(0.5,0.9))
+                msg += "\n使用方法："
+                wait(wrd(0.5,0.9))
+                msg += "\n@bot *aes encrypt*decrypt [内容]"
         else:
+            msg += "\nAES 加密解密"
             wait(wrd(0.5,0.9))
             msg += "\n使用方法："
             wait(wrd(0.5,0.9))
-            msg += "\n@bot *aes encrypt*decrypt [内容]"
+            msg += "\n@[bot] *aes encrypt*decrypt [内容]"
+        await aes_eventer.finish(msg)
     else:
-        msg += "\nAES 加密解密"
-        wait(wrd(0.5,0.9))
-        msg += "\n使用方法："
-        wait(wrd(0.5,0.9))
-        msg += "\n@[bot] *aes encrypt*decrypt [内容]"
-    await aes_eventer.finish(msg)
+        await aes_eventer.finish("AES 加密解密\n    您的账号已被封禁，无法执行此操作。")

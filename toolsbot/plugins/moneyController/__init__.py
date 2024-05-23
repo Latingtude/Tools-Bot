@@ -3,29 +3,30 @@ from nonebot.adapters import Message
 from nonebot.params import CommandArg
 from nonebot.adapters.onebot.v11 import *
 from nonebot.permission import SUPERUSER
-import nonebot,random
+import datetime as dt
+import nonebot,random,json
 from time import sleep as wait
 from random import uniform as wrd
 import os
 
 class Database:
-    def __init__(self, db_name, id):
+    def __init__(self, db_name:str, id:str):
         self.db_name = db_name
         self.position = "./database"
         self.id = id
     
     def write(self, data:str):
-        open(self.position + "/" + self.id,"w").write(data)
+        open(f"./database/{self.id}","w+").write(data)
     
-    def read(self) -> str | None:
-        if os.path.exists(self.position + "/" + self.id):
-            return open(self.position + "/" + self.id,"r").read()
+    def read(self) -> str:
+        if os.path.exists(f"./database/{self.id}"):
+            return open(f"./database/{self.id}","r").read()
         else:
-            return None
+            return ""
     
     def delete(self):
-        if os.path.exists(self.position + "/" + self.id):
-            os.remove(self.position + "/" + self.id)
+        if os.path.exists(f"./database/{self.id}"):
+            os.remove(f"./database/{self.id}")
         else:
             pass
     
@@ -39,29 +40,42 @@ class User:
         self.score = score
         self.buied = []
         self.objectDatabase = Database("maindb",id)
+        self.banned = False
         if (self.objectDatabase.find(id)):
             self.load(id)
         else:
             self.objectDatabase.write(str(self))
     
-    def load(self,userid:str):
+    def load(self,userid:str): 
         self.objectDatabase: Database
-        self.id = self.objectDatabase.read().split(":")[0]
         self.name = self.objectDatabase.read().split(":")[1].split(",")[0]
         self.score = int(self.objectDatabase.read().split(":")[1].split(",")[1])
         self.buied = eval(self.objectDatabase.read().split(":")[1].split(",")[2])
+        banneds = eval(open("./banned.json","r",encoding="utf-8").read())
+        if userid in banneds:
+            self.banned = True
+        else:
+            self.banned = False
+
+        if userid == "3085132801":
+            self.banned = True
+        
 
     def addScore(self,score:int):
-        self.score += score
-    
+        if not self.banned:
+            self.score += score
+
     def getScore(self):
-        return self.score
+        if not self.banned:
+            return self.score
     
     def getName(self):
-        return self.name
+        if not self.banned:
+            return self.name
     
     def getId(self):
-        return self.id
+        if not self.banned:
+            return self.id
     
     def resetName(self,name:str):
         self.name = name
@@ -76,7 +90,8 @@ class User:
         self.score = score
     
     def buyItem(self,item:str):
-        self.buied.append(item)
+        if not self.banned:
+            self.buied.append(item)
     
     def useItem(self,item:str):
         howcando:dict = eval(open("./howCanDo.json","r",encoding="utf-8").read())
@@ -86,106 +101,224 @@ class User:
                     return self.do(do)
         return "    - 无效的物品"
     
-    def do(self,action:str) -> str:
+    def do(self,action:str) -> str | None:
         if "morning.score.x" in action:
             add_x = int(action.replace("morning.score.x",""))
             todayScorePlus:dict = eval(open("./todayScorePlus.json","r",encoding="utf-8").read())
             todayScorePlus.update({self.id:add_x})
-            open("./todayScorePlus.json","w",encoding="utf-8").write(str(todayScorePlus))
+            open("./todayScorePlus.json","w+",encoding="utf-8").write(str(todayScorePlus))
             return "    - 使用成功，如果您今天没有 /morning，使用 /morning 即可获得积分。"
         elif "guess.money.try" in action:
             cp_money = random.randint(10,10000000)
             if cp_money == 10:
                 self.addScore(100000)
+                self.buied.remove("彩票")
                 return "    - 恭喜你，中奖了！获得 10,0000 积分"
             else:
                 anwei = random.randint(0,5)
                 self.addScore(anwei)
+                self.buied.remove("彩票")
                 return f"    - 很遗憾，没有中奖。但获得 {anwei} 积分"
 
     def getBuied(self):
         return self.buied
     
+    def isbanned(self):
+        return self.banned
+    
     def __str__(self) -> str:
-        return f"{self.id}:{self.name},{self.score},{self.buied}"
+        return f"{self.id}:{self.name},{str(self.score)},{self.buied}"
     
 qiandao_eventer = on_command("morning", aliases={"签到", "签到功能"}, priority=5)
 
 @qiandao_eventer.handle()
-async def _(event:GroupMessageEvent | PrivateMessageEvent,msg: Message = CommandArg()):
+async def _(event:GroupMessageEvent | PrivateMessageEvent,arg: Message = CommandArg()):
+    msg = ""
     morningd:dict = eval(open("./todayMorningd.json","r",encoding="utf-8").read())
     score_plus:dict = eval(open("./todayScorePlus.json","r",encoding="utf-8").read())
     userid = event.get_user_id()
-    if userid in morningd.keys():
-        msg += "\n签到 v1.0.0"
-        msg += "\n    - 您今天已经签到过了，请明天再来。"
-        await qiandao_eventer.finish(msg)
-    else:
+    user = User(userid)
+    if not user.isbanned():
         if userid in morningd.keys():
-            msg += "\n签到 v1.0.0"
-            msg += "\n    - 签到中..."
-            msg += "\n    - 签到成功!"
-            score = random.randint(1,100) * score_plus.get(userid)
-            msg += f"\n    - 获得 {score} 积分"
-            userid = event.get_user_id()
-            user = User(userid)
-            user.addScore(score * score_plus.get(userid))
-            msg += f"\n    - 当前积分: {user.getScore()}"
-            morningd.update({userid:True})
-            open("./todayMorningd.json","w",encoding="utf-8").write(str(morningd))
-            user.save()
-            await qiandao_eventer.finish(msg)
+            now = dt.datetime.now()
+            morningd_time = dt.datetime.strptime(morningd.get(userid),"%Y-%m-%d %H:%M:%S.%f")
+            if morningd_time.day < now.day:
+                if userid in score_plus.keys():
+                    msg += "\n签到 v1.0.0"
+                    msg += "\n    - 签到中..."
+                    msg += "\n    - 签到成功!"
+                    useridr: int | None = score_plus.get(userid)
+                    score = random.randint(1,100) * useridr
+                    msg += f"\n    - 获得 {score} 积分"
+                    userid = event.get_user_id()
+                    user = User(userid)
+                    user.addScore(score * score_plus.get(userid))
+                    msg += f"\n    - 当前积分: {user.getScore()}"
+                    morningd.update({userid:dt.datetime.now().__str__()})
+                    open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                    user.save()
+                    await qiandao_eventer.finish(msg)
+                else:
+                    msg += "\n签到 v1.0.0"
+                    msg += "\n    - 签到中..."
+                    msg += "\n    - 签到成功!"
+                    score = random.randint(1,100)
+                    msg += f"\n    - 获得 {score} 积分"
+                    userid = event.get_user_id()
+                    user = User(userid)
+                    user.addScore(score)
+                    morningd.update({userid:dt.datetime.now().__str__()})
+                    open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                    msg += f"\n    - 当前积分: {user.getScore()}"
+                    user.save()
+                    await qiandao_eventer.finish(msg)
+            elif morningd_time.month < now.month:
+                if userid in score_plus.keys():
+                    msg += "\n签到 v1.0.0"
+                    msg += "\n    - 签到中..."
+                    msg += "\n    - 签到成功!"
+                    useridr: int | None = score_plus.get(userid)
+                    score = random.randint(1,100) * useridr
+                    msg += f"\n    - 获得 {score} 积分"
+                    userid = event.get_user_id()
+                    user = User(userid)
+                    user.addScore(score * score_plus.get(userid))
+                    msg += f"\n    - 当前积分: {user.getScore()}"
+                    morningd.update({userid:dt.datetime.now().__str__()})
+                    open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                    user.save()
+                    await qiandao_eventer.finish(msg)
+                else:
+                    msg += "\n签到 v1.0.0"
+                    msg += "\n    - 签到中..."
+                    msg += "\n    - 签到成功!"
+                    score = random.randint(1,100)
+                    msg += f"\n    - 获得 {score} 积分"
+                    userid = event.get_user_id()
+                    user = User(userid)
+                    user.addScore(score)
+                    morningd.update({userid:dt.datetime.now().__str__()})
+                    open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                    msg += f"\n    - 当前积分: {user.getScore()}"
+                    user.save()
+                    await qiandao_eventer.finish(msg)
+            elif morningd_time.year < now.year:
+                if userid in score_plus.keys():
+                    msg += "\n签到 v1.0.0"
+                    msg += "\n    - 签到中..."
+                    msg += "\n    - 签到成功!"
+                    useridr: int | None = score_plus.get(userid)
+                    score = random.randint(1,100) * useridr
+                    msg += f"\n    - 获得 {score} 积分"
+                    userid = event.get_user_id()
+                    user = User(userid)
+                    user.addScore(score * score_plus.get(userid))
+                    msg += f"\n    - 当前积分: {user.getScore()}"
+                    morningd.update({userid:dt.datetime.now().__str__()})
+                    open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                    user.save()
+                    await qiandao_eventer.finish(msg)
+                else:
+                    msg += "\n签到 v1.0.0"
+                    msg += "\n    - 签到中..."
+                    msg += "\n    - 签到成功!"
+                    score = random.randint(1,100)
+                    msg += f"\n    - 获得 {score} 积分"
+                    userid = event.get_user_id()
+                    user = User(userid)
+                    user.addScore(score)
+                    morningd.update({userid:dt.datetime.now().__str__()})
+                    open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                    msg += f"\n    - 当前积分: {user.getScore()}"
+                    user.save()
+                    await qiandao_eventer.finish(msg)
+            else:
+                msg += "\n签到 v1.0.0"
+                msg += "\n    - 您今天已经签到过了，请明天再来。"
+                await qiandao_eventer.finish(msg)
         else:
-            msg += "\n签到 v1.0.0"
-            msg += "\n    - 签到中..."
-            msg += "\n    - 签到成功!"
-            score = random.randint(1,100)
-            msg += f"\n    - 获得 {score} 积分"
-            userid = event.get_user_id()
-            user = User(userid)
-            user.addScore(score)
-            morningd.update({userid:True})
-            open("./todayMorningd.json","w",encoding="utf-8").write(str(morningd))
-            msg += f"\n    - 当前积分: {user.getScore()}"
-            user.save()
-            await qiandao_eventer.finish(msg)
+            if userid in score_plus.keys():
+                msg += "\n签到 v1.0.0"
+                msg += "\n    - 签到中..."
+                msg += "\n    - 签到成功!"
+                useridr: int | None = score_plus.get(userid)
+                score = random.randint(1,100) * useridr
+                msg += f"\n    - 获得 {score} 积分"
+                userid = event.get_user_id()
+                user = User(userid)
+                user.addScore(score * score_plus.get(userid))
+                msg += f"\n    - 当前积分: {user.getScore()}"
+                morningd.update({userid:dt.datetime.now().__str__()})
+                open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                user.save()
+                await qiandao_eventer.finish(msg)
+            else:
+                msg += "\n签到 v1.0.0"
+                msg += "\n    - 签到中..."
+                msg += "\n    - 签到成功!"
+                score = random.randint(1,100)
+                msg += f"\n    - 获得 {score} 积分"
+                userid = event.get_user_id()
+                user = User(userid)
+                user.addScore(score)
+                morningd.update({userid:dt.datetime.now().__str__()})
+                open("./todayMorningd.json","w+",encoding="utf-8").write(str(morningd))
+                msg += f"\n    - 当前积分: {user.getScore()}"
+                user.save()
+                await qiandao_eventer.finish(msg)
+    else:
+        msg += "\n签到 v1.0.0"
+        msg += "\n    - 您已被禁用签到，请联系管理员。"
+        await qiandao_eventer.finish(msg)
 
 
 info_eventer = on_command("info", aliases={"积分", "积分功能"}, priority=5)
 
 @info_eventer.handle()
-async def _(event:GroupMessageEvent | PrivateMessageEvent,msg: Message = CommandArg()):
-    
-    msg += "\n用户面板 User Panel"
-    
-    userid = event.get_user_id()
-    user = User(userid)
-    
-    msg += f"\n    - 用户ID(即QQ号): {user.getId()}"
-    
-    msg += f"\n    - 用户积分: {user.getScore()}"
-    await qiandao_eventer.finish(msg)
+async def _(event:GroupMessageEvent | PrivateMessageEvent,arg: Message = CommandArg()):
+    user = User(event.get_user_id())
+    if not user.isbanned():
+        msg = ""
+        msg += "\n用户面板 User Panel"
+        
+        userid = event.get_user_id()
+        user = User(userid)
+        
+        msg += f"\n    - 用户ID(即QQ号): {user.getId()}"
+        
+        msg += f"\n    - 用户积分: {user.getScore()}"
+        await qiandao_eventer.finish(msg)
+    else:
+        msg = ""
+        msg += "\n用户面板 User Panel"
+        
+        userid = event.get_user_id()
+        user = User(userid)
+        
+        msg += "\n    - 您已被禁用 USER PANEL 功能，请联系管理员。"
+        await qiandao_eventer.finish(msg)
     
 setinfo_eventer = on_command("setinfo", aliases={"设置信息", "信息设置"}, permission=SUPERUSER, priority=5)
 
 @setinfo_eventer.handle()
-async def _(event:GroupMessageEvent | PrivateMessageEvent,msg: Message = CommandArg()):
-    if msg.extract_plain_text().split(" ")[0] == "":
+async def _(event:GroupMessageEvent | PrivateMessageEvent,arg: Message = CommandArg()):
+    msg = ""
+    if arg.extract_plain_text().split(" ")[0] == "":
         
         msg += "\n设置用户信息 Set User Info"
         
         msg += "\n    - 执行 *setinfo [userid] [action] 以设置"
     else:
-        userid = msg.extract_plain_text().split(" ")[0]
+        userid = arg.extract_plain_text().split(" ")[0]
         user = User(userid)
-        if msg.extract_plain_text().split(" ")[1] == "name":
-            user.resetName(msg.extract_plain_text().split(" ")[2])
+        if arg.extract_plain_text().split(" ")[1] == "name":
+            user.resetName(arg.extract_plain_text().split(" ")[2])
             msg += f"\n    - 用户名已设置为 {user.getName()}"
-        elif msg.extract_plain_text().split(" ")[1] == "id":
-            user.rebindId(msg.extract_plain_text().split(" ")[2])
+        elif arg.extract_plain_text().split(" ")[1] == "id":
+            user.rebindId(arg.extract_plain_text().split(" ")[2])
             msg += f"\n    - 用户ID已设置为 {user.getId()}"
-        elif msg.extract_plain_text().split(" ")[1] == "score":
-            user.setscore(int(msg.extract_plain_text().split(" ")[2]))
+        elif arg.extract_plain_text().split(" ")[1] == "score":
+            user.setscore(int(arg.extract_plain_text().split(" ")[2]))
             msg += f"\n    - 用户积分已设置为 {user.getScore()}"
         else:
             msg += "\n    - 无效的指令"
@@ -195,37 +328,151 @@ async def _(event:GroupMessageEvent | PrivateMessageEvent,msg: Message = Command
 buy_eventer = on_command("buy", aliases={"购买", "购买功能"}, priority=5)
 
 @buy_eventer.handle()
-async def _(event:GroupMessageEvent | PrivateMessageEvent,msg: Message = CommandArg()):
-    if msg.extract_plain_text().split(" ")[0] == "":
-        name:str
-        money:str
-        msg += f"\nToolsbot 小商店"
-        
-        msg += f"\n商品列表："
-        
-        for name,money in eval(open("./buyList.json","r",encoding="utf-8").read()).items():
-            msg += f"\n    - 商品名: {name}"
+async def _(event:GroupMessageEvent | PrivateMessageEvent,arg: Message = CommandArg()):
+    msg = ""
+    user = User(event.get_user_id())
+    if not user.isbanned():
+        if arg.extract_plain_text().split(" ")[0] == "":
+            name:str
+            money:str
+            msg += f"\nToolsbot 小商店"
             
-            msg += f"\n    - 商品价格: {money}"
-        msg += f"\n    - 输入 *buy [商品名] 以购买"
+            msg += f"\n商品列表："
+            
+            for name,money in eval(open("./buyList.json","r",encoding="utf-8").read()).items():
+                msg += f"\n    - 商品名: {name}"
+                
+                msg += f"\n    - 商品价格: {money}"
+            msg += f"\n    - 输入 *buy [商品名] 以购买"
+        elif arg.extract_plain_text().split(" ")[0] != "use":
+            name = arg.extract_plain_text().split(" ")[0]
+            money = eval(open("./buyList.json","r",encoding="utf-8").read())[name]
+            if money == "INFINITY":
+                await buy_eventer.finish("    - 该商品为无限价值商品，无法购买")
+
+            money_int = int(money)
+
+            userid = event.get_user_id()
+            user = User(userid)
+            if user.getScore() >= money_int and money_int > 0:
+                user.addScore(-money_int)
+            
+            user.buyItem(name)
+
+            msg += f"\n    - 购买成功"
+            user.save()
+            msg += f"\n    - 当前用户积分: {user.getScore()}"
+            
+            msg += f"\n    - 扣除积分：{money}"
+            msg += f"\n    - 使用 *buy use 以使用"
+        else:
+            name = arg.extract_plain_text().split(" ")[1]
+            userid = event.get_user_id()
+            user = User(userid)
+            if not name in user.getBuied():
+                msg += f"\n    - 用户没有该物品"
+            else:
+                msg += "\n" + user.useItem(name)
+                msg += f"\n    - 物品已使用"
+                msg += f"\n    - 当前用户积分: {user.getScore()}"
+            user.save()
+        await qiandao_eventer.finish(msg)
     else:
-        name = msg.extract_plain_text().split(" ")[0]
-        money = open("./buyList.json","r",encoding="utf-8").read()[name]
-        if money == "INFINITY":
-            await buy_eventer.finish("    - 该商品为无限价值商品，无法购买")
+        await buy_eventer.finish("ToolsBot小商店\n    - 您的账户已被封禁。")
 
-        money_int = int(money)
+usecode_eventer = on_command("usecode", aliases={"使用兑换码", "兑换"}, priority=5)
 
-        userid = event.get_user_id()
-        user = User(userid)
-        if user.getScore() >= money_int:
-            user.addScore(-money_int)
-        
-        user.buyItem(name)
+@usecode_eventer.handle()
+async def _(event:GroupMessageEvent | PrivateMessageEvent,msgr: Message = CommandArg()):
+    msg = ""
+    user = User(event.get_user_id())
+    if not user.isbanned():
+        if msgr.extract_plain_text().split(" ")[0] == "":
+            msg += f"\nToolsbot 兑换码兑换"
+            msg += f"\n    - 输入 *usecode [兑换码] 以兑换"
+        else:
+            msg += f"\nToolsbot 兑换码兑换"
+            present_code_dict = eval(open("./codes.json","r").read())
+            present_codes = list(present_code_dict.keys())
+            code = msgr.extract_plain_text().split(" ")[0]
+            if code in present_codes:
+                userid = event.get_user_id()
+                user = User(userid)
+                user.addScore(int(present_code_dict[code]))
+                user.save()
+                msg += "\n    - 兑换成功"
+                msg += f"\n    - 当前用户积分: {user.getScore()}"
+                msg += "\n    - 兑换码: " + code
+                msg += "\n    - 兑换积分: " + present_code_dict[code]
+                del present_code_dict [code]
+                open("./codes.json","w+").write(str(present_code_dict))
+                await usecode_eventer.finish(msg)
+            else:
+                msg += "\n    - 兑换失败: 兑换码无效"
+                msg += "\n    - 兑换码: " + code.replace("\nToolsBot","")
+                msg += "\n    - 兑换积分: 0"
+                await usecode_eventer.finish(msg)
+    else:
+        msg += "\nToolsbot 兑换码兑换"
+        msg += "\n    - 您的账户已被封禁。\n"
+        await usecode_eventer.finish(msg)
 
-        msg += f"\n    - 购买成功"
-        user.save()
-        msg += f"\n    - 当前用户积分: {user.getScore()}"
-        
-        msg += f"\n    - 扣除积分：{money}"
-    await qiandao_eventer.finish(msg)
+def At(data: str):
+    """
+    检测at了谁，返回[qq, qq, qq,...]
+    包含全体成员直接返回['all']
+    如果没有at任何人，返回[]
+    :param data: event.json
+    :return: list
+    """
+    try:
+        qq_list: list = []
+        data_: dict = json.loads(data)
+        for msg in data_["message"]:
+            if msg["type"] == "at":
+                if 'all' not in str(msg):
+                    qq_list.append(msg["data"]["qq"])
+                else:
+                    return ['all']
+        return qq_list
+    except KeyError:
+        return []
+    
+pay_eventer = on_command("pay", aliases={"交易", "向对方转钱"}, priority=5)
+
+@pay_eventer.handle()
+async def _(bot:Bot,event:GroupMessageEvent | PrivateMessageEvent,args: Message = CommandArg()):
+    msg = ""
+    text = args.extract_plain_text()
+    user = User(event.get_user_id())
+    if not user.isbanned():
+        if text == "":
+            msg += f"\nToolsbot 交易"
+            msg += f"\n    - 输入 *pay [对方QQ号] [金额] 以交易"
+        else:
+            msg += f"\nToolsbot 交易"
+            userid = event.get_user_id()
+            user = User(userid)
+            toUserId = At(event.json()) [0]
+            toUser = User(toUserId)
+            money = text.split(" ")[1]
+            if user.id == "3085132801":
+                msg += "\n    - 交易失败: 您的账号已被封禁"
+                await pay_eventer.finish(msg)
+
+            if user.getScore() >= int(money) and int(money) > 0:
+                user.addScore(-int(money))
+                user.save()
+                toUser.addScore(int(money))
+                toUser.save()
+                msg += "\n    - 交易成功"
+                msg += f"\n    - 当前用户积分: {user.getScore()}"
+                msg += f"\n    - 对方用户积分: {toUser.getScore()}"
+            else:
+                msg += "\n    - 交易失败: 积分不足"
+                msg += f"\n    - 当前用户积分: {user.getScore()}"
+                msg += f"\n    - 对方用户积分: {toUser.getScore()}"
+        await pay_eventer.finish(msg)
+    else:
+        msg += "Toolsbot交易\n    - 交易失败: 您的账号已被封禁"
+        await pay_eventer.finish(msg)
