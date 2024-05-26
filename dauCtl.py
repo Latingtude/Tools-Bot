@@ -96,7 +96,7 @@ class User:
         howcando:dict = eval(open("./howCanDo.json","r",encoding="utf-8").read())
         for name in self.buied:
             for namer,do in howcando.items():
-                if name == namer:
+                if item == namer:
                     return self.do(do)
         return "    - 无效的物品"
     
