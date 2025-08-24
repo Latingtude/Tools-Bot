@@ -16,11 +16,11 @@ class Database:
         self.id = id
     
     def write(self, data:str):
-        open(f"./database/{self.id}","w+").write(data)
+        open(f"./database/{self.id}","w+", encoding="utf-8").write(data)
     
     def read(self) -> str:
         if os.path.exists(f"./database/{self.id}"):
-            return open(f"./database/{self.id}","r").read()
+            return open(f"./database/{self.id}","r", encoding="utf-8").read()
         else:
             return ""
     
@@ -44,13 +44,15 @@ class User:
         if (self.objectDatabase.find(id)):
             self.load(id)
         else:
-            self.objectDatabase.write(str(self))
+            self.objectDatabase.write(json.dumps(self.get()))
     
     def load(self,userid:str): 
         self.objectDatabase: Database
-        self.name = self.objectDatabase.read().split(":")[1].split(",")[0]
-        self.score = int(self.objectDatabase.read().split(":")[1].split(",")[1])
-        self.buied = eval(self.objectDatabase.read().split(":")[1].split(",")[2])
+        database: dict = json.loads(self.objectDatabase.read())
+        self.name = database.get("name", "[ERROR FOUND]")
+        self.score = database.get("score", 0)
+        self.buied = database.get("buied", [])
+        
         banneds = eval(open("./banned.json","r",encoding="utf-8").read())
         if userid in banneds:
             self.banned = True
@@ -84,7 +86,7 @@ class User:
         self.id = id
     
     def save(self):
-        Database("maindb",self.id).write(str(self))
+        Database("maindb",self.id).write(json.dumps(self.get()))
     
     def setscore(self,score:int):
         self.score = score
@@ -126,9 +128,15 @@ class User:
     def isbanned(self):
         return self.banned
     
-    def __str__(self) -> str:
-        return f"{self.id}:{self.name},{str(self.score)},{self.buied}"
+    def get(self) -> dict:
+        return {
+            "name": self.name,
+            "score": self.score,
+            "buied": self.buied
+        }
     
+    def __str__(self) -> dict:
+        return self.get() # 大大大大大哥别骂我，这里写 dict 纯粹因为不写这个会报错
 qiandao_eventer = on_command("morning", aliases={"签到", "签到功能"}, priority=5)
 
 @qiandao_eventer.handle()
@@ -343,9 +351,19 @@ async def _(event:GroupMessageEvent | PrivateMessageEvent,arg: Message = Command
                 msg += f"\n    - 商品名: {name}"
                 
                 msg += f"\n    - 商品价格: {money}"
-            msg += f"\n    - 输入 *buy [商品名] 以购买"
+            msg += f"\n    - 输入 *buy [商品名] [数量 = 1] 以购买"
         elif arg.extract_plain_text().split(" ")[0] != "use":
             name = arg.extract_plain_text().split(" ")[0]
+            try:
+                const = arg.extract_plain_text().split(" ")[1]
+            except:
+                const = ""
+            
+            if const == "":
+                const = 1
+            else:
+                const = int(const)
+                
             money = eval(open("./buyList.json","r",encoding="utf-8").read())[name]
             if money == "INFINITY":
                 await buy_eventer.finish("    - 该商品为无限价值商品，无法购买")
@@ -355,24 +373,35 @@ async def _(event:GroupMessageEvent | PrivateMessageEvent,arg: Message = Command
             userid = event.get_user_id()
             user = User(userid)
             if user.getScore() >= money_int and money_int > 0:
-                user.addScore(-money_int)
+                user.addScore(- (money_int * const))
             
-            user.buyItem(name)
+                for i in range(const):
+                    user.buyItem(name)
 
-            msg += f"\n    - 购买成功"
-            user.save()
-            msg += f"\n    - 当前用户积分: {user.getScore()}"
-            
-            msg += f"\n    - 扣除积分：{money}"
-            msg += f"\n    - 使用 *buy use 以使用"
+                msg += f"\n    - 购买成功 数量 {const}"
+                user.save()
+                msg += f"\n    - 当前用户积分: {user.getScore()}"
+                
+                msg += f"\n    - 扣除积分：{money}"
+                msg += f"\n    - 使用 *buy use {name} {const} (可不填，若你只买了一个) 以使用"
+            else:
+                msg += "\n     - 购买失败"
+                msg += "\n     - 你他妈没钱还来买东西？"
         else:
             name = arg.extract_plain_text().split(" ")[1]
+            
+            try:
+                const = int(arg.extract_plain_text().split(" ") [2])
+            except:
+                const = 1
+                
             userid = event.get_user_id()
             user = User(userid)
             if not name in user.getBuied():
                 msg += f"\n    - 用户没有该物品"
             else:
-                msg += "\n" + user.useItem(name)
+                for i in range(const):
+                    msg += "\n" + user.useItem(name)
                 msg += f"\n    - 物品已使用"
                 msg += f"\n    - 当前用户积分: {user.getScore()}"
             user.save()
@@ -448,17 +477,24 @@ async def _(bot:Bot,event:GroupMessageEvent | PrivateMessageEvent,args: Message 
     if not user.isbanned():
         if text == "":
             msg += f"\nToolsbot 交易"
-            msg += f"\n    - 输入 *pay [对方QQ号] [金额] 以交易"
+            msg += f"\n    - 输入 *pay [@对方] [金额] 以交易"
         else:
             msg += f"\nToolsbot 交易"
             userid = event.get_user_id()
             user = User(userid)
-            toUserId = At(event.json()) [0]
-            toUser = User(toUserId)
-            money = text.split(" ")[1]
-            if user.id == "3085132801":
-                msg += "\n    - 交易失败: 您的账号已被封禁"
-                await pay_eventer.finish(msg)
+            try:
+                toUserId = At(event.json()) [0]
+                toUser = User(toUserId)
+                if toUser == User("1792443798"):
+                    await pay_eventer.finish("你他妈自己给自己付钱？")
+                if userid == toUserId :
+                    await pay_eventer.finish("你他妈自己给自己付钱？")
+                money = text.split(" ")[1]
+                if user.id == "3085132801":
+                    msg += "\n    - 交易失败: 您的账号已被封禁"
+                    await pay_eventer.finish(msg)
+            except Exception:
+                await pay_eventer.finish("他妈的你语法错了，不要用 qq 号，用 @! at!")
 
             if user.getScore() >= int(money) and int(money) > 0:
                 user.addScore(-int(money))
@@ -469,10 +505,50 @@ async def _(bot:Bot,event:GroupMessageEvent | PrivateMessageEvent,args: Message 
                 msg += f"\n    - 当前用户积分: {user.getScore()}"
                 msg += f"\n    - 对方用户积分: {toUser.getScore()}"
             else:
-                msg += "\n    - 交易失败: 积分不足"
+                msg += "\n    - 交易失败: 积分不足 / 你给对方转负数"
                 msg += f"\n    - 当前用户积分: {user.getScore()}"
                 msg += f"\n    - 对方用户积分: {toUser.getScore()}"
         await pay_eventer.finish(msg)
     else:
         msg += "Toolsbot交易\n    - 交易失败: 您的账号已被封禁"
         await pay_eventer.finish(msg)
+
+echo_eventer = on_command("echo", aliases={"说"}, priority=5)
+
+@echo_eventer.handle()
+async def _(bot:Bot,event:GroupMessageEvent | PrivateMessageEvent,args: Message = CommandArg()):
+    msg = ""
+    text = args.extract_plain_text()
+    user = User(event.get_user_id())
+    if not user.isbanned():
+        await echo_eventer.finish(text)
+    else:
+        await echo_eventer.finish("ToolsBot ECHO\b   - 乐，没想到吧，你被封禁了连 echo 都用不了")
+        
+wasteTaker_event = on_command("cleanwaste", aliases={"捡垃圾"}, priority=5)
+
+@wasteTaker_event.handle()
+async def _ (bot: Bot, event: GroupMessageEvent | PrivateMessageEvent, args: Message = CommandArg()):
+    wastes = ["普通", "普通","普通","普通","垃圾","垃圾","垃圾","垃圾","垃圾","垃圾","垃圾","垃圾","中级", "高级", "黄金", "钻石"]
+    
+    waste = [
+        1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 100, 10000
+    ]
+    
+    __waste =  wastes.index(random.choice(wastes))
+    waste_name = wastes [__waste]
+    waste_money = waste [__waste]
+    
+    msg = "ToolsBot - 捡垃圾"
+    msg += "\n    - 你没钱了，你来捡垃圾。"
+    msg += f"\n   - 垃圾属性："
+    msg += f"\n       类型： {waste_name}"
+    msg += f"\n       赚了： {waste_money}"
+    
+    user = User(event.get_user_id())
+    
+    if not user.isbanned():
+        user.addScore (waste_money)
+        await wasteTaker_event.finish(msg)
+    else:
+        await wasteTaker_event.finish("ToolsBot - 捡垃圾\n    - 你被城管抓住了，你别想捡垃圾了。")

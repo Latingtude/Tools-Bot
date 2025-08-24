@@ -43,13 +43,15 @@ class User:
         if (self.objectDatabase.find(id)):
             self.load(id)
         else:
-            self.objectDatabase.write(str(self))
+            self.objectDatabase.write(json.dumps(self.get()))
     
     def load(self,userid:str): 
         self.objectDatabase: Database
-        self.name = self.objectDatabase.read().split(":")[1].split(",")[0]
-        self.score = int(self.objectDatabase.read().split(":")[1].split(",")[1])
-        self.buied = eval(self.objectDatabase.read().split(":")[1].split(",")[2])
+        database: dict = json.loads(self.objectDatabase.read())
+        self.name = database.get("name", "[ERROR FOUND]")
+        self.score = database.get("score", 0)
+        self.buied = database.get("buied", [])
+        
         banneds = eval(open("./banned.json","r",encoding="utf-8").read())
         if userid in banneds:
             self.banned = True
@@ -83,7 +85,7 @@ class User:
         self.id = id
     
     def save(self):
-        Database("maindb",self.id).write(str(self))
+        Database("maindb",self.id).write(json.dumps(self.get()))
     
     def setscore(self,score:int):
         self.score = score
@@ -96,7 +98,7 @@ class User:
         howcando:dict = eval(open("./howCanDo.json","r",encoding="utf-8").read())
         for name in self.buied:
             for namer,do in howcando.items():
-                if item == namer:
+                if name == namer:
                     return self.do(do)
         return "    - 无效的物品"
     
@@ -125,5 +127,12 @@ class User:
     def isbanned(self):
         return self.banned
     
-    def __str__(self) -> str:
-        return f"{self.id}:{self.name},{str(self.score)},{self.buied}"
+    def get(self) -> dict:
+        return {
+            "name": self.name,
+            "score": self.score,
+            "buied": self.buied
+        }
+    
+    def __str__(self) -> dict:
+        return self.get() # 大大大大大哥别骂我，这里写 dict 纯粹因为不写这个会报错

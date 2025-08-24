@@ -9,10 +9,6 @@ from random import uniform as wrd
 import os
 import dauCtl as dc
 
-driver = nonebot.get_driver()
-driver.register_adapter(Adapter)
-nonebot.load_plugin("nonebot_plugin_gocqhttp")
-
 help_eventer = on_command("help", aliases={"帮助", "使用说明"}, priority=5)
 
 
@@ -39,6 +35,9 @@ async def _(event: MessageEvent,arg: Message = CommandArg()):
         msg += "\n*accountState 查看帐号状态"
         msg += "\n*ping Ping网站"
         msg += "\nping *pong 打 乒 乓 球"
+        msg += "\n*echo 复读机"
+        msg += "\n*ai AI 功能。"
+        msg += "\n*cleanwaste 捡 垃 圾"
         wait(wrd(0.5,0.9))
         await help_eventer.send(msg)
     else:
@@ -71,17 +70,17 @@ async def _(event: MessageEvent,arg: Message = CommandArg()):
         NoneBot版本:1.9.1
         """
         msg = "关于 Bot"
-        msg += "\n版本: 1.0.4-release (Skills 11)"
-        msg += "\n最后一次更新时间：2024/5/19 21：16"
+        msg += "\n版本: 1.0.5-release (Skills 12)"
+        msg += "\n最后一次更新时间：2025/8/24 15: 33"
         msg += "\n[作者网站]"
-        msg += "\nhttps://moesoft.xyz"
-        msg += "\nhttps://virtual.icp.moesoft.xyz (虚拟ICP备案，玩的)"
+        msg += "\nhttps://airoj.latingtude-studios.icu"
+        msg += "\nhttps://icp.latingtude-studios.icu (虚拟ICP备案，玩的)"
         msg += "\n[代码]"
-        msg += "\n基于Python-Nonebot1 (https://v1.nonebot.dev/)"
-        msg += "\nPython版本:3.12.2 VIRTUAL ENVIRONMENT"
-        msg += "\nNoneBot版本:1.9.1"
-        msg += "\nOpenShamrock: 1.0.9 (偶尔用)"
-        msg += "\nLLOneBot: v3.26.0"
+        msg += "\n基于 Python, Nonebot 2 (https://nonebot.dev/)"
+        msg += "\nPython 版本: v3.13.3 VIRTUAL ENVIRONMENT"
+        msg += "\nNoneBot 版本: v2.1.2"
+        msg += "\nOpenShamrock: v1.0.9 (偶尔用)"
+        msg += "\nNapCatQQ: v4.8.98"
         msg += "\nDKoEzDatabase: 0.0.1"
         wait(wrd(0.5,0.9))
         await about_eventer.send(msg)

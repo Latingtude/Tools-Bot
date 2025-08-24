@@ -3,7 +3,6 @@ from nonebot.adapters import Message
 from nonebot.params import CommandArg
 import Crypto.Cipher.AES as AES
 import base64
-from nonebot.adapters.cqhttp import Adapter
 import nonebot
 from time import sleep as wait
 from random import uniform,randint
