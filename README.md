@@ -1,5 +1,11 @@
 # ToolsBot
 
+> [!Warning]
+>
+> 该 Bot 目前已停止更新。
+>
+> 请前往 RE: Tools-Bot 仓库接收新大版本更新。
+
 ## 如何部署
 
 1. 打开 Python 命令行,输入以下命令:
